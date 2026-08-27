@@ -4,7 +4,7 @@
 
 namespace duckdb {
 
-class WaddleExtension : public Extension {
+class CompressionFsExtension : public Extension {
 public:
 	void Load(ExtensionLoader &db) override;
 	std::string Name() override;

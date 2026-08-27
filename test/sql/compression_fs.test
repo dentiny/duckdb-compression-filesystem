@@ -1,0 +1,23 @@
+# name: test/sql/compression_fs.test
+# description: test compression_fs extension
+# group: [sql]
+
+# Before we load the extension, this will fail
+statement error
+SELECT compression_fs('Sam');
+----
+Catalog Error: Scalar Function with name compression_fs does not exist!
+
+# Require statement will ensure this test is run with this extension loaded
+require compression_fs
+
+# Confirm the extension works
+query I
+SELECT compression_fs('Sam');
+----
+...........🦆 Sam
+
+query I
+SELECT compression_fs_openssl_version('Michael') ILIKE 'CompressionFs Michael, my linked OpenSSL version is OpenSSL%';
+----
+true
