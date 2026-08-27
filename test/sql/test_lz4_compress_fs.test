@@ -39,6 +39,15 @@ SELECT count(*) FROM read_csv('{TEMP_DIR}/t_explicit.csv', compression='lz4');
 ----
 10000
 
+# A tiny LZ4 stream containing a single integer
+statement ok
+COPY (SELECT 42 AS i) TO '{TEMP_DIR}/single.csv.lz4' (FORMAT CSV, HEADER, COMPRESSION 'lz4');
+
+query I
+SELECT * FROM read_csv('{TEMP_DIR}/single.csv.lz4');
+----
+42
+
 # Empty table still produces a valid frame
 statement ok
 CREATE TABLE empty(i INTEGER);
