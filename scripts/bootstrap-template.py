@@ -172,14 +172,14 @@ if __name__ == "__main__":
     files_to_search.extend(Path("./src").rglob("./**/*.txt"))
     files_to_search.extend(Path("./src").rglob("./*.md"))
 
-    replace_everywhere("waddle", name_extension)
-    replace_everywhere("Waddle", name_extension.capitalize())
+    replace_everywhere("compression_fs", name_extension)
+    replace_everywhere("CompressionFs", to_camel_case(name_extension))
     replace_everywhere("<extension_name>", name_extension)
 
     remove_placeholder()
 
     string_to_replace = name_extension
-    string_to_find = "waddle"
+    string_to_find = "compression_fs"
 
     # rename files
     os.rename(f"test/sql/{string_to_find}.test", f"test/sql/{string_to_replace}.test")
