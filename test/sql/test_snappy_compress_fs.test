@@ -33,6 +33,15 @@ SELECT count(*) FROM read_csv('{TEMP_DIR}/t_explicit.csv', compression='snappy')
 ----
 10000
 
+# A tiny Snappy stream containing a single integer
+statement ok
+COPY (SELECT 42 AS i) TO '{TEMP_DIR}/single.csv.sz' (FORMAT CSV, HEADER, COMPRESSION 'snappy');
+
+query I
+SELECT * FROM read_csv('{TEMP_DIR}/single.csv.sz');
+----
+42
+
 # Empty input still writes a valid stream identifier
 statement ok
 CREATE TABLE empty(i INTEGER);

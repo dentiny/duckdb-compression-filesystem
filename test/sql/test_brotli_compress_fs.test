@@ -1,0 +1,55 @@
+# name: test/sql/test_brotli_compress_fs.test
+# description: test compression_fs Brotli filesystem
+# group: [sql]
+
+require compression_fs
+
+statement ok
+CREATE TABLE t AS SELECT i, 'value-' || i::VARCHAR AS s FROM range(10000) tbl(i);
+
+# Write a Brotli stream using its conventional .br suffix
+statement ok
+COPY t TO '{TEMP_DIR}/t.csv.br' (FORMAT CSV, HEADER, COMPRESSION 'brotli');
+
+# Auto-detect from the .br suffix
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t.csv.br');
+----
+10000
+
+query II
+SELECT * FROM read_csv('{TEMP_DIR}/t.csv.br') WHERE i IN (0, 1, 9999) ORDER BY i;
+----
+0	value-0
+1	value-1
+9999	value-9999
+
+# Explicit compression type does not require a recognized suffix
+statement ok
+COPY t TO '{TEMP_DIR}/t_explicit.csv' (FORMAT CSV, HEADER, COMPRESSION 'brotli');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t_explicit.csv', compression='brotli');
+----
+10000
+
+# A tiny Brotli stream containing a single integer
+statement ok
+COPY (SELECT 42 AS i) TO '{TEMP_DIR}/single.csv.br' (FORMAT CSV, HEADER, COMPRESSION 'brotli');
+
+query I
+SELECT * FROM read_csv('{TEMP_DIR}/single.csv.br');
+----
+42
+
+# Empty input still produces a valid Brotli stream
+statement ok
+CREATE TABLE empty(i INTEGER);
+
+statement ok
+COPY empty TO '{TEMP_DIR}/empty.csv.br' (FORMAT CSV, HEADER, COMPRESSION 'brotli');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/empty.csv.br');
+----
+0
