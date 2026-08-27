@@ -1,0 +1,58 @@
+# name: test/sql/test_lz4_compress_fs.test
+# description: test compression_fs LZ4 filesystem
+# group: [sql]
+
+require compression_fs
+
+statement ok
+CREATE TABLE t AS SELECT i, i::VARCHAR AS s FROM range(10000) tbl(i);
+
+# Write via explicit compression + .lz4 so auto-detect can find the filesystem
+statement ok
+COPY t TO '{TEMP_DIR}/t.csv.lz4' (FORMAT CSV, HEADER, COMPRESSION 'lz4');
+
+# Auto-detect from the .lz4 suffix
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t.csv.lz4');
+----
+10000
+
+query II
+SELECT * FROM read_csv('{TEMP_DIR}/t.csv.lz4') WHERE i IN (0, 1, 9999) ORDER BY i;
+----
+0	0
+1	1
+9999	9999
+
+# Explicit compression type
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t.csv.lz4', compression='lz4');
+----
+10000
+
+# Write without a .lz4 suffix, then read with an explicit type
+statement ok
+COPY t TO '{TEMP_DIR}/t_explicit.csv' (FORMAT CSV, HEADER, COMPRESSION 'lz4');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t_explicit.csv', compression='lz4');
+----
+10000
+
+# Empty table still produces a valid frame
+statement ok
+CREATE TABLE empty(i INTEGER);
+
+statement ok
+COPY empty TO '{TEMP_DIR}/empty.csv.lz4' (FORMAT CSV, HEADER, COMPRESSION 'lz4');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/empty.csv.lz4');
+----
+0
+
+# Unknown compression type still fails
+statement error
+SELECT * FROM read_csv('{TEMP_DIR}/t.csv.lz4', compression='not_a_codec');
+----
+not supported
