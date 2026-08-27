@@ -1,48 +1,23 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "compression_fs_extension.hpp"
-#include "duckdb.hpp"
-#include "duckdb/common/exception.hpp"
-#include "duckdb/function/scalar_function.hpp"
-#include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
+#include "lz4_file_system.hpp"
 
-// OpenSSL linked through vcpkg
-#include <openssl/opensslv.h>
+#include "duckdb.hpp"
+#include "duckdb/main/extension/extension_loader.hpp"
 
 namespace duckdb {
 
-inline void CompressionFsScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &name_vector = args.data[0];
-	UnaryExecutor::Execute<string_t, string_t>(name_vector, result, args.size(), [&](string_t name) {
-		return StringVector::AddString(result, "...........🦆 " + name.GetString());
-	});
-}
-
-inline void CompressionFsOpenSSLVersionScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &name_vector = args.data[0];
-	UnaryExecutor::Execute<string_t, string_t>(name_vector, result, args.size(), [&](string_t name) {
-		return StringVector::AddString(result, "CompressionFs " + name.GetString() +
-		                                           ", my linked OpenSSL version is " + OPENSSL_VERSION_TEXT);
-	});
-}
-
 static void LoadInternal(ExtensionLoader &loader) {
-	// Register a scalar function
-	auto compression_fs_scalar_function =
-	    ScalarFunction("compression_fs", {LogicalType::VARCHAR}, LogicalType::VARCHAR, CompressionFsScalarFun);
-
-	loader.RegisterFunction(compression_fs_scalar_function);
-
-	// Register another scalar function
-	auto compression_fs_openssl_version_scalar_function =
-	    ScalarFunction("compression_fs_openssl_version", {LogicalType::VARCHAR}, LogicalType::VARCHAR,
-	                   CompressionFsOpenSSLVersionScalarFun);
-	loader.RegisterFunction(compression_fs_openssl_version_scalar_function);
+	loader.SetDescription("Compression filesystems that DuckDB does not ship natively (lz4)");
+	auto &fs = loader.GetDatabaseInstance().GetFileSystem();
+	fs.RegisterCompressionFilesystem(make_uniq<Lz4FileSystem>());
 }
 
 void CompressionFsExtension::Load(ExtensionLoader &loader) {
 	LoadInternal(loader);
 }
+
 std::string CompressionFsExtension::Name() {
 	return "compression_fs";
 }
