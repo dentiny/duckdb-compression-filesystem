@@ -1,4 +1,5 @@
 #include "crc32c.hpp"
+#include "compression_path_utils.hpp"
 #include "snappy_file_system.hpp"
 #include "snappy_frame_utils.hpp"
 
@@ -7,7 +8,6 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/helper.hpp"
 #include "duckdb/common/numeric_utils.hpp"
-#include "duckdb/common/string_util.hpp"
 
 #include <cstring>
 
@@ -261,13 +261,7 @@ unique_ptr<FileHandle> SnappyFileSystem::OpenCompressedFile(QueryContext context
 }
 
 bool SnappyFileSystem::CanHandleFile(const string &fpath) {
-	auto path = fpath;
-	if (!StringUtil::StartsWith(path, "\\\\?\\")) {
-		const auto question_mark_pos = path.find('?');
-		path = path.substr(0, question_mark_pos);
-	}
-	path = StringUtil::Lower(path);
-	return StringUtil::EndsWith(path, ".sz") || StringUtil::EndsWith(path, ".snappy");
+	return CompressionPathUtils::HasExtension(fpath, {".sz", ".snappy"});
 }
 
 unique_ptr<StreamWrapper> SnappyFileSystem::CreateStream() {

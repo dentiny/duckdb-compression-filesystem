@@ -8,6 +8,29 @@ set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 project(${TARGET_NAME})
 
 set(BZIP2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bzip2")
+set(XZ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xz")
+
+# Build only the static liblzma target from the XZ submodule.
+set(XZ_NLS OFF)
+set(XZ_THREADS no)
+set(XZ_SANDBOX no)
+set(XZ_TOOL_XZ OFF)
+set(XZ_TOOL_XZDEC OFF)
+set(XZ_TOOL_LZMADEC OFF)
+set(XZ_TOOL_LZMAINFO OFF)
+set(XZ_DOC OFF)
+set(BUILD_SHARED_LIBS_WAS_DEFINED FALSE)
+if(DEFINED BUILD_SHARED_LIBS)
+  set(BUILD_SHARED_LIBS_WAS_DEFINED TRUE)
+  set(BUILD_SHARED_LIBS_SAVED ${BUILD_SHARED_LIBS})
+endif()
+set(BUILD_SHARED_LIBS OFF)
+add_subdirectory("${XZ_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/xz" EXCLUDE_FROM_ALL)
+if(BUILD_SHARED_LIBS_WAS_DEFINED)
+  set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
+else()
+  unset(BUILD_SHARED_LIBS)
+endif()
 
 set(CMAKE_CXX_STANDARD
     "17"
@@ -24,18 +47,21 @@ else()
   set(DUCKDB_SNAPPY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/duckdb/third_party/snappy")
 endif()
 
-include_directories(src/include ${BZIP2_DIR} "${DUCKDB_BROTLI_DIR}/include"
-                    ${DUCKDB_LZ4_DIR} ${DUCKDB_SNAPPY_DIR})
+include_directories(
+  src/include ${BZIP2_DIR} "${DUCKDB_BROTLI_DIR}/include" ${DUCKDB_LZ4_DIR}
+  ${DUCKDB_SNAPPY_DIR} "${XZ_DIR}/src/liblzma/api")
 
 set(EXTENSION_SOURCES
     src/brotli_file_system.cpp
     src/bzip2_file_system.cpp
     src/compression_fs_extension.cpp
+    src/compression_path_utils.cpp
     src/crc32c.cpp
     src/lz4_frame_utils.cpp
     src/lz4_file_system.cpp
     src/snappy_frame_utils.cpp
-    src/snappy_file_system.cpp)
+    src/snappy_file_system.cpp
+    src/xz_file_system.cpp)
 
 # In-tree codecs. The parquet static library already compiles these sources, so
 # only add them to our static target when parquet is not linked into the binary.
@@ -96,9 +122,11 @@ build_loadable_extension(
   ${BROTLI_SOURCES}
   ${LZ4_SOURCE}
   ${SNAPPY_SOURCES})
+target_link_libraries(${EXTENSION_NAME} liblzma)
+target_link_libraries(${LOADABLE_EXTENSION_NAME} liblzma)
 
 install(
-  TARGETS ${EXTENSION_NAME}
+  TARGETS ${EXTENSION_NAME} liblzma
   EXPORT "${DUCKDB_EXPORT_SET}"
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
   ARCHIVE DESTINATION "${INSTALL_LIB_DIR}")

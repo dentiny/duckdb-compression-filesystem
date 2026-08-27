@@ -1,12 +1,12 @@
 #include "bzip2_file_system.hpp"
 
 #include "bzlib.h"
+#include "compression_path_utils.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/helper.hpp"
 #include "duckdb/common/limits.hpp"
 #include "duckdb/common/numeric_utils.hpp"
-#include "duckdb/common/string_util.hpp"
 
 #include <cstring>
 
@@ -226,12 +226,7 @@ unique_ptr<FileHandle> Bzip2FileSystem::OpenCompressedFile(QueryContext context,
 }
 
 bool Bzip2FileSystem::CanHandleFile(const string &fpath) {
-	auto path = fpath;
-	if (!StringUtil::StartsWith(path, "\\\\?\\")) {
-		const auto question_mark_pos = path.find('?');
-		path = path.substr(0, question_mark_pos);
-	}
-	return StringUtil::EndsWith(StringUtil::Lower(path), ".bz2");
+	return CompressionPathUtils::HasExtension(fpath, ".bz2");
 }
 
 unique_ptr<StreamWrapper> Bzip2FileSystem::CreateStream() {
