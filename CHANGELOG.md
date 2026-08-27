@@ -2,4 +2,4 @@
 
 ## Added
 
-- Support LZ4, Brotli, Snappy, and Bzip2 compression filesystems
+- Support LZ4, Brotli, Snappy, Bzip2, and XZ compression filesystems

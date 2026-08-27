@@ -2,11 +2,11 @@
 
 #include "brotli/decode.h"
 #include "brotli/encode.h"
+#include "compression_path_utils.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/helper.hpp"
 #include "duckdb/common/numeric_utils.hpp"
-#include "duckdb/common/string_util.hpp"
 
 namespace duckdb {
 
@@ -198,12 +198,7 @@ unique_ptr<FileHandle> BrotliFileSystem::OpenCompressedFile(QueryContext context
 }
 
 bool BrotliFileSystem::CanHandleFile(const string &fpath) {
-	auto path = fpath;
-	if (!StringUtil::StartsWith(path, "\\\\?\\")) {
-		const auto question_mark_pos = path.find('?');
-		path = path.substr(0, question_mark_pos);
-	}
-	return StringUtil::EndsWith(StringUtil::Lower(path), ".br");
+	return CompressionPathUtils::HasExtension(fpath, ".br");
 }
 
 unique_ptr<StreamWrapper> BrotliFileSystem::CreateStream() {

@@ -1,0 +1,55 @@
+# name: test/sql/test_xz_compress_fs.test
+# description: test compression_fs XZ filesystem
+# group: [sql]
+
+require compression_fs
+
+statement ok
+CREATE TABLE t AS SELECT i, 'value-' || i::VARCHAR AS s FROM range(10000) tbl(i);
+
+# Write an XZ stream using its conventional .xz suffix
+statement ok
+COPY t TO '{TEMP_DIR}/t.csv.xz' (FORMAT CSV, HEADER, COMPRESSION 'xz');
+
+# Auto-detect from the .xz suffix
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t.csv.xz');
+----
+10000
+
+query II
+SELECT * FROM read_csv('{TEMP_DIR}/t.csv.xz') WHERE i IN (0, 1, 9999) ORDER BY i;
+----
+0	value-0
+1	value-1
+9999	value-9999
+
+# Explicit compression type does not require a recognized suffix
+statement ok
+COPY t TO '{TEMP_DIR}/t_explicit.csv' (FORMAT CSV, HEADER, COMPRESSION 'xz');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t_explicit.csv', compression='xz');
+----
+10000
+
+# A tiny XZ stream containing a single integer
+statement ok
+COPY (SELECT 42 AS i) TO '{TEMP_DIR}/single.csv.xz' (FORMAT CSV, HEADER, COMPRESSION 'xz');
+
+query I
+SELECT * FROM read_csv('{TEMP_DIR}/single.csv.xz');
+----
+42
+
+# Empty input still produces a valid XZ stream
+statement ok
+CREATE TABLE empty(i INTEGER);
+
+statement ok
+COPY empty TO '{TEMP_DIR}/empty.csv.xz' (FORMAT CSV, HEADER, COMPRESSION 'xz');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/empty.csv.xz');
+----
+0

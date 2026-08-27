@@ -1,9 +1,9 @@
 #include "lz4_file_system.hpp"
 
+#include "compression_path_utils.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/helper.hpp"
 #include "duckdb/common/numeric_utils.hpp"
-#include "duckdb/common/string_util.hpp"
 #include "lz4.hpp"
 #include "lz4_frame_utils.hpp"
 
@@ -394,12 +394,7 @@ unique_ptr<FileHandle> Lz4FileSystem::OpenCompressedFile(QueryContext context, u
 }
 
 bool Lz4FileSystem::CanHandleFile(const string &fpath) {
-	auto path = fpath;
-	if (!StringUtil::StartsWith(path, "\\\\?\\")) {
-		const auto question_mark_pos = path.find('?');
-		path = path.substr(0, question_mark_pos);
-	}
-	return StringUtil::EndsWith(StringUtil::Lower(path), ".lz4");
+	return CompressionPathUtils::HasExtension(fpath, ".lz4");
 }
 
 unique_ptr<StreamWrapper> Lz4FileSystem::CreateStream() {
