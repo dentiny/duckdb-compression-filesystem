@@ -1,0 +1,55 @@
+# name: test/sql/test_bzip2_compress_fs.test
+# description: test compression_fs bzip2 filesystem
+# group: [sql]
+
+require compression_fs
+
+statement ok
+CREATE TABLE t AS SELECT i, 'value-' || i::VARCHAR AS s FROM range(10000) tbl(i);
+
+# Write a bzip2 stream using its conventional .bz2 suffix
+statement ok
+COPY t TO '{TEMP_DIR}/t.csv.bz2' (FORMAT CSV, HEADER, COMPRESSION 'bzip2');
+
+# Auto-detect from the .bz2 suffix
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t.csv.bz2');
+----
+10000
+
+query II
+SELECT * FROM read_csv('{TEMP_DIR}/t.csv.bz2') WHERE i IN (0, 1, 9999) ORDER BY i;
+----
+0	value-0
+1	value-1
+9999	value-9999
+
+# Explicit compression type does not require a recognized suffix
+statement ok
+COPY t TO '{TEMP_DIR}/t_explicit.csv' (FORMAT CSV, HEADER, COMPRESSION 'bzip2');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t_explicit.csv', compression='bzip2');
+----
+10000
+
+# A tiny bzip2 stream containing a single integer
+statement ok
+COPY (SELECT 42 AS i) TO '{TEMP_DIR}/single.csv.bz2' (FORMAT CSV, HEADER, COMPRESSION 'bzip2');
+
+query I
+SELECT * FROM read_csv('{TEMP_DIR}/single.csv.bz2');
+----
+42
+
+# Empty input still produces a valid bzip2 stream
+statement ok
+CREATE TABLE empty(i INTEGER);
+
+statement ok
+COPY empty TO '{TEMP_DIR}/empty.csv.bz2' (FORMAT CSV, HEADER, COMPRESSION 'bzip2');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/empty.csv.bz2');
+----
+0

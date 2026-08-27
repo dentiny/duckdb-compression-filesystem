@@ -7,6 +7,8 @@ set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 
 project(${TARGET_NAME})
 
+set(BZIP2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bzip2")
+
 set(CMAKE_CXX_STANDARD
     "17"
     CACHE STRING "C++ standard to enforce")
@@ -22,11 +24,12 @@ else()
   set(DUCKDB_SNAPPY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/duckdb/third_party/snappy")
 endif()
 
-include_directories(src/include "${DUCKDB_BROTLI_DIR}/include"
+include_directories(src/include ${BZIP2_DIR} "${DUCKDB_BROTLI_DIR}/include"
                     ${DUCKDB_LZ4_DIR} ${DUCKDB_SNAPPY_DIR})
 
 set(EXTENSION_SOURCES
     src/brotli_file_system.cpp
+    src/bzip2_file_system.cpp
     src/compression_fs_extension.cpp
     src/crc32c.cpp
     src/lz4_frame_utils.cpp
@@ -71,14 +74,28 @@ set(BROTLI_SOURCES
     "${DUCKDB_BROTLI_DIR}/dec/decode.cpp"
     "${DUCKDB_BROTLI_DIR}/dec/huffman.cpp"
     "${DUCKDB_BROTLI_DIR}/dec/bit_reader.cpp")
-set(STATIC_SOURCES ${EXTENSION_SOURCES})
+set(BZIP2_SOURCES
+    "${BZIP2_DIR}/blocksort.c"
+    "${BZIP2_DIR}/huffman.c"
+    "${BZIP2_DIR}/crctable.c"
+    "${BZIP2_DIR}/randtable.c"
+    "${BZIP2_DIR}/compress.c"
+    "${BZIP2_DIR}/decompress.c"
+    "${BZIP2_DIR}/bzlib.c")
+set(STATIC_SOURCES ${EXTENSION_SOURCES} ${BZIP2_SOURCES})
 if(NOT DUCKDB_EXTENSION_PARQUET_SHOULD_LINK)
   list(APPEND STATIC_SOURCES ${BROTLI_SOURCES} ${LZ4_SOURCE} ${SNAPPY_SOURCES})
 endif()
 
 build_static_extension(${TARGET_NAME} ${STATIC_SOURCES})
-build_loadable_extension(${TARGET_NAME} " " ${EXTENSION_SOURCES}
-                         ${BROTLI_SOURCES} ${LZ4_SOURCE} ${SNAPPY_SOURCES})
+build_loadable_extension(
+  ${TARGET_NAME}
+  " "
+  ${EXTENSION_SOURCES}
+  ${BZIP2_SOURCES}
+  ${BROTLI_SOURCES}
+  ${LZ4_SOURCE}
+  ${SNAPPY_SOURCES})
 
 install(
   TARGETS ${EXTENSION_NAME}

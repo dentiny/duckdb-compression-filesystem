@@ -12,11 +12,13 @@ files can be used directly by readers and writers such as `read_csv` and
 | LZ4 | `lz4` | `.lz4` | LZ4 frame |
 | Snappy | `snappy` | `.sz`, `.snappy` | Snappy framed |
 | Brotli | `brotli` | `.br` | Brotli stream |
+| Bzip2 | `bzip2` | `.bz2` | Bzip2 stream |
 
 DuckDB already provides native file-level support for gzip and Zstandard.
 
 The extension uses the LZ4, Snappy, and Brotli implementations vendored in the
-DuckDB source tree; it does not add external runtime dependencies.
+DuckDB source tree. Bzip2 1.0.8 is included as a source submodule, so the
+extension does not require external runtime libraries.
 
 ## Usage
 
@@ -39,6 +41,9 @@ COPY events TO 'events.csv.sz'
 
 COPY events TO 'events.csv.br'
     (FORMAT CSV, HEADER, COMPRESSION 'brotli');
+
+COPY events TO 'events.csv.bz2'
+    (FORMAT CSV, HEADER, COMPRESSION 'bzip2');
 ```
 
 ### Read using suffix detection
@@ -47,6 +52,7 @@ COPY events TO 'events.csv.br'
 SELECT * FROM read_csv('events.csv.lz4');
 SELECT * FROM read_csv('events.csv.sz');
 SELECT * FROM read_csv('events.csv.br');
+SELECT * FROM read_csv('events.csv.bz2');
 ```
 
 ### Read using an explicit compression type
@@ -58,4 +64,5 @@ suffix:
 SELECT * FROM read_csv('events.csv', compression = 'lz4');
 SELECT * FROM read_csv('events.csv', compression = 'snappy');
 SELECT * FROM read_csv('events.csv', compression = 'brotli');
+SELECT * FROM read_csv('events.csv', compression = 'bzip2');
 ```
