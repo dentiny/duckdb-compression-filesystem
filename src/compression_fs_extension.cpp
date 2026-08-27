@@ -2,6 +2,7 @@
 
 #include "compression_fs_extension.hpp"
 #include "lz4_file_system.hpp"
+#include "snappy_file_system.hpp"
 
 #include "duckdb.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
@@ -9,9 +10,10 @@
 namespace duckdb {
 
 static void LoadInternal(ExtensionLoader &loader) {
-	loader.SetDescription("Compression filesystems that DuckDB does not ship natively (lz4)");
+	loader.SetDescription("Compression filesystems that DuckDB does not ship natively (lz4, snappy)");
 	auto &fs = loader.GetDatabaseInstance().GetFileSystem();
 	fs.RegisterCompressionFilesystem(make_uniq<Lz4FileSystem>());
+	fs.RegisterCompressionFilesystem(make_uniq<SnappyFileSystem>());
 }
 
 void CompressionFsExtension::Load(ExtensionLoader &loader) {

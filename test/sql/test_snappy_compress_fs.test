@@ -1,0 +1,46 @@
+# name: test/sql/test_snappy_compress_fs.test
+# description: test compression_fs Snappy framed filesystem
+# group: [sql]
+
+require compression_fs
+
+statement ok
+CREATE TABLE t AS SELECT i, 'value-' || i::VARCHAR AS s FROM range(10000) tbl(i);
+
+# Write a standard Snappy framed stream using its conventional .sz suffix
+statement ok
+COPY t TO '{TEMP_DIR}/t.csv.sz' (FORMAT CSV, HEADER, COMPRESSION 'snappy');
+
+# Auto-detect from the .sz suffix
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t.csv.sz');
+----
+10000
+
+query II
+SELECT * FROM read_csv('{TEMP_DIR}/t.csv.sz') WHERE i IN (0, 1, 9999) ORDER BY i;
+----
+0	value-0
+1	value-1
+9999	value-9999
+
+# Explicit compression type does not require a recognized suffix
+statement ok
+COPY t TO '{TEMP_DIR}/t_explicit.csv' (FORMAT CSV, HEADER, COMPRESSION 'snappy');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/t_explicit.csv', compression='snappy');
+----
+10000
+
+# Empty input still writes a valid stream identifier
+statement ok
+CREATE TABLE empty(i INTEGER);
+
+statement ok
+COPY empty TO '{TEMP_DIR}/empty.csv.sz' (FORMAT CSV, HEADER, COMPRESSION 'snappy');
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/empty.csv.sz');
+----
+0
