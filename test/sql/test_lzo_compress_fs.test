@@ -1,0 +1,59 @@
+# name: test/sql/test_lzo_compress_fs.test
+# description: LZO round-trip, lzop compatibility, and invalid streams
+# group: [sql]
+
+require compression_fs
+
+# Suffix detection and data integrity across multiple blocks and buffers.
+statement ok
+COPY (SELECT i, md5(i::VARCHAR) AS s FROM range(20000) t(i)) TO '{TEMP_DIR}/data.csv.lzo' (HEADER);
+
+query II
+SELECT count(*), count(*) FILTER (WHERE s = md5(i::VARCHAR)) FROM read_csv('{TEMP_DIR}/data.csv.lzo');
+----
+20000	20000
+
+# Explicit compression without a recognized suffix also exercises stored blocks.
+statement ok
+COPY (SELECT 42 AS i) TO '{TEMP_DIR}/explicit.csv' (HEADER, COMPRESSION 'lzo');
+
+query I
+SELECT * FROM read_csv('{TEMP_DIR}/explicit.csv', compression='lzo');
+----
+42
+
+# Empty input still includes a header and end marker.
+statement ok
+COPY (SELECT 1 AS i WHERE false) TO '{TEMP_DIR}/empty.lzo' (HEADER false);
+
+query I
+SELECT count(*) FROM read_csv('{TEMP_DIR}/empty.lzo', header=false, columns={'i':'INTEGER'});
+----
+0
+
+# Independent fixture: lzop -9 on b'i\n' + b'42\n' * 100.
+statement ok
+COPY (SELECT from_hex('894c5a4f000d0a1a0a104020a0094003090300000d000000006abe3fba00000000002f8903970000012e0000000d531c2c3415690a343220000a080011000000000000')) TO '{TEMP_DIR}/external.lzo' (FORMAT BLOB, COMPRESSION 'none');
+
+query II
+SELECT count(*), sum(i) FROM read_csv('{TEMP_DIR}/external.lzo');
+----
+100	4200
+
+# Corrupt uncompressed-block checksum.
+statement ok
+COPY (SELECT from_hex('894c5a4f000d0a1a0a104020a0094003090300000d000000006abe3fba00000000002f8903970000012e0000000d521c2c3415690a343220000a080011000000000000')) TO '{TEMP_DIR}/corrupt.lzo' (FORMAT BLOB, COMPRESSION 'none');
+
+statement error
+SELECT * FROM read_csv('{TEMP_DIR}/corrupt.lzo', header=true, columns={'i':'INTEGER'});
+----
+LZO block checksum mismatch
+
+# Missing end marker must not silently return partial data.
+statement ok
+COPY (SELECT from_hex('894c5a4f000d0a1a0a104020a0094003090300000d000000006abe3fba00000000002f8903970000012e0000000d531c2c3415690a343220000a0800110000')) TO '{TEMP_DIR}/truncated.lzo' (FORMAT BLOB, COMPRESSION 'none');
+
+statement error
+SELECT * FROM read_csv('{TEMP_DIR}/truncated.lzo', header=true, columns={'i':'INTEGER'});
+----
+Truncated LZO stream

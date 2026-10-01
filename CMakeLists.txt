@@ -8,6 +8,7 @@ set(LOADABLE_EXTENSION_NAME ${TARGET_NAME}_loadable_extension)
 project(${TARGET_NAME})
 
 set(BZIP2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bzip2")
+set(LZOKAY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lzokay")
 set(XZ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xz")
 
 # Build only the static liblzma target from the XZ submodule.
@@ -52,6 +53,7 @@ endif()
 include_directories(
   src/include
   ${BZIP2_DIR}
+  ${LZOKAY_DIR}
   "${DUCKDB_BROTLI_DIR}/include"
   ${DUCKDB_LZ4_DIR}
   ${DUCKDB_SNAPPY_DIR}
@@ -67,6 +69,7 @@ set(EXTENSION_SOURCES
     src/deflate_file_system.cpp
     src/lz4_frame_utils.cpp
     src/lz4_file_system.cpp
+    src/lzo_file_system.cpp
     src/snappy_frame_utils.cpp
     src/snappy_file_system.cpp
     src/xz_file_system.cpp)
@@ -116,7 +119,8 @@ set(BZIP2_SOURCES
     "${BZIP2_DIR}/compress.c"
     "${BZIP2_DIR}/decompress.c"
     "${BZIP2_DIR}/bzlib.c")
-set(STATIC_SOURCES ${EXTENSION_SOURCES} ${BZIP2_SOURCES})
+set(LZOKAY_SOURCE "${LZOKAY_DIR}/lzokay.cpp")
+set(STATIC_SOURCES ${EXTENSION_SOURCES} ${BZIP2_SOURCES} ${LZOKAY_SOURCE})
 if(NOT DUCKDB_EXTENSION_PARQUET_SHOULD_LINK)
   list(APPEND STATIC_SOURCES ${BROTLI_SOURCES} ${LZ4_SOURCE} ${SNAPPY_SOURCES})
 endif()
@@ -129,6 +133,7 @@ build_loadable_extension(
   " "
   ${EXTENSION_SOURCES}
   ${BZIP2_SOURCES}
+  ${LZOKAY_SOURCE}
   ${BROTLI_SOURCES}
   ${LZ4_SOURCE}
   ${SNAPPY_SOURCES}
