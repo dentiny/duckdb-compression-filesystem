@@ -12,3 +12,6 @@
 [submodule "xz"]
 	path = xz
 	url = https://github.com/tukaani-project/xz.git
+[submodule "lzokay"]
+	path = lzokay
+	url = https://github.com/AxioDL/lzokay.git

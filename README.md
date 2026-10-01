@@ -10,6 +10,7 @@ files can be used directly by readers and writers such as `read_csv` and
 | Format | Compression name | Auto-detected suffixes | Stream format |
 | --- | --- | --- | --- |
 | LZ4 | `lz4` | `.lz4` | LZ4 frame |
+| LZO | `lzo` | `.lzo` | lzop container (LZO1X) |
 | Snappy | `snappy` | `.sz`, `.snappy` | Snappy framed |
 | Brotli | `brotli` | `.br` | Brotli stream |
 | Bzip2 | `bzip2` | `.bz2` | Bzip2 stream |
@@ -26,6 +27,11 @@ submodules, so the extension does not require external runtime libraries.
 DefaultCodec and Python `zlib.compress`. Raw DEFLATE, gzip, ZIP containers,
 and preset dictionaries are not supported by this codec.
 
+LZO uses the MIT-licensed [lzokay](https://github.com/AxioDL/lzokay) source
+submodule. It reads and writes lzop containers, including block checksums.
+Raw/Hadoop LzoCodec blocks, filters, multipart headers, and extra header
+fields are not supported. Blocks are limited to 64 MiB.
+
 ## Usage
 
 ```sql
@@ -41,6 +47,9 @@ FROM range(10000) AS t(i);
 
 COPY events TO 'events.csv.lz4'
     (FORMAT CSV, HEADER, COMPRESSION 'lz4');
+
+COPY events TO 'events.csv.lzo'
+    (FORMAT CSV, HEADER, COMPRESSION 'lzo');
 
 COPY events TO 'events.csv.sz'
     (FORMAT CSV, HEADER, COMPRESSION 'snappy');
@@ -62,6 +71,7 @@ COPY events TO 'events.csv.xz'
 
 ```sql
 SELECT * FROM read_csv('events.csv.lz4');
+SELECT * FROM read_csv('events.csv.lzo');
 SELECT * FROM read_csv('events.csv.sz');
 SELECT * FROM read_csv('events.csv.br');
 SELECT * FROM read_csv('events.csv.bz2');
@@ -76,6 +86,7 @@ suffix:
 
 ```sql
 SELECT * FROM read_csv('events.csv', compression = 'lz4');
+SELECT * FROM read_csv('events.csv', compression = 'lzo');
 SELECT * FROM read_csv('events.csv', compression = 'snappy');
 SELECT * FROM read_csv('events.csv', compression = 'brotli');
 SELECT * FROM read_csv('events.csv', compression = 'bzip2');

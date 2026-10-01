@@ -5,6 +5,7 @@
 #include "compression_fs_extension.hpp"
 #include "deflate_file_system.hpp"
 #include "lz4_file_system.hpp"
+#include "lzo_file_system.hpp"
 #include "snappy_file_system.hpp"
 #include "xz_file_system.hpp"
 
@@ -15,12 +16,13 @@ namespace duckdb {
 
 static void LoadInternal(ExtensionLoader &loader) {
 	loader.SetDescription(
-	    "Compression filesystems that DuckDB does not ship natively (brotli, bzip2, deflate, lz4, snappy, xz)");
+	    "Compression filesystems that DuckDB does not ship natively (brotli, bzip2, deflate, lz4, lzo, snappy, xz)");
 	auto &fs = loader.GetDatabaseInstance().GetFileSystem();
 	fs.RegisterCompressionFilesystem(make_uniq<BrotliFileSystem>());
 	fs.RegisterCompressionFilesystem(make_uniq<Bzip2FileSystem>());
 	fs.RegisterCompressionFilesystem(make_uniq<DeflateFileSystem>());
 	fs.RegisterCompressionFilesystem(make_uniq<Lz4FileSystem>());
+	fs.RegisterCompressionFilesystem(make_uniq<LzoFileSystem>());
 	fs.RegisterCompressionFilesystem(make_uniq<SnappyFileSystem>());
 	fs.RegisterCompressionFilesystem(make_uniq<XzFileSystem>());
 }
