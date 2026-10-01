@@ -15,6 +15,7 @@ files can be used directly by readers and writers such as `read_csv` and
 | Brotli | `brotli` | `.br` | Brotli stream |
 | Bzip2 | `bzip2` | `.bz2` | Bzip2 stream |
 | DEFLATE | `deflate` | `.deflate` | zlib-wrapped DEFLATE (RFC 1950/1951) |
+| LZMA | `lzma` | `.lzma` | Legacy LZMA-Alone stream |
 | XZ | `xz` | `.xz` | XZ stream |
 
 DuckDB already provides native file-level support for gzip and Zstandard.
@@ -31,6 +32,10 @@ LZO uses the MIT-licensed [lzokay](https://github.com/AxioDL/lzokay) source
 submodule. It reads and writes lzop containers, including block checksums.
 Raw/Hadoop LzoCodec blocks, filters, multipart headers, and extra header
 fields are not supported. Blocks are limited to 64 MiB.
+
+`lzma` uses the existing liblzma dependency to read and write legacy
+LZMA-Alone files (as produced by `xz --format=lzma`). This format has no
+integrity checksum; it is distinct from XZ and raw LZMA streams.
 
 ## Usage
 
@@ -63,6 +68,9 @@ COPY events TO 'events.csv.bz2'
 COPY events TO 'events.csv.deflate'
     (FORMAT CSV, HEADER, COMPRESSION 'deflate');
 
+COPY events TO 'events.csv.lzma'
+    (FORMAT CSV, HEADER, COMPRESSION 'lzma');
+
 COPY events TO 'events.csv.xz'
     (FORMAT CSV, HEADER, COMPRESSION 'xz');
 ```
@@ -76,6 +84,7 @@ SELECT * FROM read_csv('events.csv.sz');
 SELECT * FROM read_csv('events.csv.br');
 SELECT * FROM read_csv('events.csv.bz2');
 SELECT * FROM read_csv('events.csv.deflate');
+SELECT * FROM read_csv('events.csv.lzma');
 SELECT * FROM read_csv('events.csv.xz');
 ```
 
@@ -91,5 +100,6 @@ SELECT * FROM read_csv('events.csv', compression = 'snappy');
 SELECT * FROM read_csv('events.csv', compression = 'brotli');
 SELECT * FROM read_csv('events.csv', compression = 'bzip2');
 SELECT * FROM read_csv('events.csv', compression = 'deflate');
+SELECT * FROM read_csv('events.csv', compression = 'lzma');
 SELECT * FROM read_csv('events.csv', compression = 'xz');
 ```
