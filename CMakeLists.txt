@@ -50,8 +50,13 @@ else()
 endif()
 
 include_directories(
-  src/include ${BZIP2_DIR} "${DUCKDB_BROTLI_DIR}/include" ${DUCKDB_LZ4_DIR}
-  ${DUCKDB_SNAPPY_DIR} ${DUCKDB_MINIZ_DIR} "${XZ_DIR}/src/liblzma/api")
+  src/include
+  ${BZIP2_DIR}
+  "${DUCKDB_BROTLI_DIR}/include"
+  ${DUCKDB_LZ4_DIR}
+  ${DUCKDB_SNAPPY_DIR}
+  ${DUCKDB_MINIZ_DIR}
+  "${XZ_DIR}/src/liblzma/api")
 
 set(EXTENSION_SOURCES
     src/brotli_file_system.cpp
