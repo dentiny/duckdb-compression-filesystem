@@ -38,18 +38,25 @@ set(CMAKE_CXX_STANDARD
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(DEFINED DUCKDB_MODULE_BASE_DIR)
+  set(DUCKDB_MINIZ_DIR "${DUCKDB_MODULE_BASE_DIR}/third_party/miniz")
   set(DUCKDB_BROTLI_DIR "${DUCKDB_MODULE_BASE_DIR}/third_party/brotli")
   set(DUCKDB_LZ4_DIR "${DUCKDB_MODULE_BASE_DIR}/third_party/lz4")
   set(DUCKDB_SNAPPY_DIR "${DUCKDB_MODULE_BASE_DIR}/third_party/snappy")
 else()
+  set(DUCKDB_MINIZ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/duckdb/third_party/miniz")
   set(DUCKDB_BROTLI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/duckdb/third_party/brotli")
   set(DUCKDB_LZ4_DIR "${CMAKE_CURRENT_SOURCE_DIR}/duckdb/third_party/lz4")
   set(DUCKDB_SNAPPY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/duckdb/third_party/snappy")
 endif()
 
 include_directories(
-  src/include ${BZIP2_DIR} "${DUCKDB_BROTLI_DIR}/include" ${DUCKDB_LZ4_DIR}
-  ${DUCKDB_SNAPPY_DIR} "${XZ_DIR}/src/liblzma/api")
+  src/include
+  ${BZIP2_DIR}
+  "${DUCKDB_BROTLI_DIR}/include"
+  ${DUCKDB_LZ4_DIR}
+  ${DUCKDB_SNAPPY_DIR}
+  ${DUCKDB_MINIZ_DIR}
+  "${XZ_DIR}/src/liblzma/api")
 
 set(EXTENSION_SOURCES
     src/brotli_file_system.cpp
@@ -57,6 +64,7 @@ set(EXTENSION_SOURCES
     src/compression_fs_extension.cpp
     src/compression_path_utils.cpp
     src/crc32c.cpp
+    src/deflate_file_system.cpp
     src/lz4_frame_utils.cpp
     src/lz4_file_system.cpp
     src/snappy_frame_utils.cpp
@@ -114,6 +122,8 @@ if(NOT DUCKDB_EXTENSION_PARQUET_SHOULD_LINK)
 endif()
 
 build_static_extension(${TARGET_NAME} ${STATIC_SOURCES})
+# DuckDB already links miniz into the host. Bundle it only in the loadable
+# extension, where host-internal symbols may not be exported.
 build_loadable_extension(
   ${TARGET_NAME}
   " "
@@ -121,7 +131,8 @@ build_loadable_extension(
   ${BZIP2_SOURCES}
   ${BROTLI_SOURCES}
   ${LZ4_SOURCE}
-  ${SNAPPY_SOURCES})
+  ${SNAPPY_SOURCES}
+  "${DUCKDB_MINIZ_DIR}/miniz.cpp")
 target_link_libraries(${EXTENSION_NAME} liblzma)
 target_link_libraries(${LOADABLE_EXTENSION_NAME} liblzma)
 

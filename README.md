@@ -13,13 +13,18 @@ files can be used directly by readers and writers such as `read_csv` and
 | Snappy | `snappy` | `.sz`, `.snappy` | Snappy framed |
 | Brotli | `brotli` | `.br` | Brotli stream |
 | Bzip2 | `bzip2` | `.bz2` | Bzip2 stream |
+| DEFLATE | `deflate` | `.deflate` | zlib-wrapped DEFLATE (RFC 1950/1951) |
 | XZ | `xz` | `.xz` | XZ stream |
 
 DuckDB already provides native file-level support for gzip and Zstandard.
 
-The extension uses the LZ4, Snappy, and Brotli implementations vendored in the
+The extension uses the LZ4, Snappy, Brotli, and miniz implementations vendored in the
 DuckDB source tree. Bzip2 1.0.8 and XZ Utils 5.8.3 are included as source
 submodules, so the extension does not require external runtime libraries.
+
+`deflate` reads and writes zlib-wrapped streams, compatible with Hadoop
+DefaultCodec and Python `zlib.compress`. Raw DEFLATE, gzip, ZIP containers,
+and preset dictionaries are not supported by this codec.
 
 ## Usage
 
@@ -46,6 +51,9 @@ COPY events TO 'events.csv.br'
 COPY events TO 'events.csv.bz2'
     (FORMAT CSV, HEADER, COMPRESSION 'bzip2');
 
+COPY events TO 'events.csv.deflate'
+    (FORMAT CSV, HEADER, COMPRESSION 'deflate');
+
 COPY events TO 'events.csv.xz'
     (FORMAT CSV, HEADER, COMPRESSION 'xz');
 ```
@@ -57,6 +65,7 @@ SELECT * FROM read_csv('events.csv.lz4');
 SELECT * FROM read_csv('events.csv.sz');
 SELECT * FROM read_csv('events.csv.br');
 SELECT * FROM read_csv('events.csv.bz2');
+SELECT * FROM read_csv('events.csv.deflate');
 SELECT * FROM read_csv('events.csv.xz');
 ```
 
@@ -70,5 +79,6 @@ SELECT * FROM read_csv('events.csv', compression = 'lz4');
 SELECT * FROM read_csv('events.csv', compression = 'snappy');
 SELECT * FROM read_csv('events.csv', compression = 'brotli');
 SELECT * FROM read_csv('events.csv', compression = 'bzip2');
+SELECT * FROM read_csv('events.csv', compression = 'deflate');
 SELECT * FROM read_csv('events.csv', compression = 'xz');
 ```
