@@ -217,7 +217,7 @@ bool LzoStreamWrapper::Read(StreamData &sd) {
 				}
 			}
 			if (decoded_size > sd.out_buf_size) {
-				sd.out_buff = make_unsafe_uniq_array<data_t>(decoded_size);
+				sd.out_buff = sd.out_buff.GetAllocator()->Allocate(decoded_size);
 				sd.out_buf_size = decoded_size;
 			}
 			if (encoded_size == decoded_size) {
