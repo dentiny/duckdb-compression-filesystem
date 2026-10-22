@@ -126,18 +126,14 @@ if(NOT DUCKDB_EXTENSION_PARQUET_SHOULD_LINK)
 endif()
 
 build_static_extension(${TARGET_NAME} ${STATIC_SOURCES})
-# DuckDB already links miniz into the host. Bundle it only in the loadable
-# extension, where host-internal symbols may not be exported.
-build_loadable_extension(
-  ${TARGET_NAME}
-  " "
-  ${EXTENSION_SOURCES}
-  ${BZIP2_SOURCES}
-  ${LZOKAY_SOURCE}
-  ${BROTLI_SOURCES}
-  ${LZ4_SOURCE}
-  ${SNAPPY_SOURCES}
-  "${DUCKDB_MINIZ_DIR}/miniz.cpp")
+set(LOADABLE_SOURCES ${EXTENSION_SOURCES} ${BZIP2_SOURCES} ${LZOKAY_SOURCE}
+                     ${BROTLI_SOURCES} ${LZ4_SOURCE} ${SNAPPY_SOURCES})
+# Static extension builds already obtain miniz from duckdb_static. Dynamic
+# extension builds bundle it because the host may not export internal symbols.
+if(NOT EXTENSION_STATIC_BUILD)
+  list(APPEND LOADABLE_SOURCES "${DUCKDB_MINIZ_DIR}/miniz.cpp")
+endif()
+build_loadable_extension(${TARGET_NAME} " " ${LOADABLE_SOURCES})
 target_link_libraries(${EXTENSION_NAME} liblzma)
 target_link_libraries(${LOADABLE_EXTENSION_NAME} liblzma)
 
