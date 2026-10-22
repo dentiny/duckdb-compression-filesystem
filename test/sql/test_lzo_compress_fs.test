@@ -22,6 +22,15 @@ SELECT * FROM read_csv('{TEMP_DIR}/explicit.csv', compression='lzo');
 ----
 42
 
+# A stored 300000-byte lzop block grows the default 256 KiB output buffer.
+statement ok
+COPY (SELECT from_hex('894c5a4f000d0a1a0a1040206009400103000000010000000000000000000000000018dd011f000493e0000493e0730ceff7' || repeat('34320a', 100000) || '00000000')) TO '{TEMP_DIR}/large_block.lzo' (FORMAT BLOB, COMPRESSION 'none');
+
+query II
+SELECT count(*), sum(i) FROM read_csv('{TEMP_DIR}/large_block.lzo', header=false, columns={'i':'INTEGER'});
+----
+100000	4200000
+
 # Empty input still includes a header and end marker.
 statement ok
 COPY (SELECT 1 AS i WHERE false) TO '{TEMP_DIR}/empty.lzo' (HEADER false);
