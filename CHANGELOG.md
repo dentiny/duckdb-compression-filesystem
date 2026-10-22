@@ -1,3 +1,9 @@
+# 0.2.0
+
+## Updated
+
+- Sync DuckDB to the latest `v2.0-cyanoptera` commit and extension-ci-tools to the latest `main` commit.
+
 # 0.1.0
 
 ## Added
