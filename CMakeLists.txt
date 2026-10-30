@@ -119,6 +119,10 @@ build_loadable_extension(
   ${LZ4_SOURCE}
   ${SNAPPY_SOURCES}
   "${DUCKDB_MINIZ_DIR}/miniz.cpp")
+# Some builds link a prebuilt libduckdb_static.a into the loadable extension,
+# which already defines duckdb_miniz. Keep the bundled copy in its own namespace.
+target_compile_definitions(${LOADABLE_EXTENSION_NAME}
+                           PRIVATE duckdb_miniz=compression_fs_miniz)
 # DuckDB's Parquet headers expose a different, namespaced Brotli API. Always
 # select the headers matching the libraries linked here.
 target_include_directories(${EXTENSION_NAME} BEFORE

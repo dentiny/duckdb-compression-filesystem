@@ -1,3 +1,10 @@
+# 0.2.1
+
+## Fixed
+
+- Fix CVE-2026-111497 in the Brotli filesystem by upgrading to independently pinned Brotli 1.2.1 for both static and loadable extension builds.
+- Fix duplicate miniz symbols when the loadable extension links against a prebuilt DuckDB static library.
+
 # 0.2.0
 
 ## Updated
