@@ -29,8 +29,8 @@ private:
 	static void WriteOutput(CompressedFile &file, const_data_ptr_t output, idx_t size);
 
 	CompressedFile *file = nullptr;
-	duckdb_brotli::BrotliDecoderState *decoder = nullptr;
-	duckdb_brotli::BrotliEncoderState *encoder = nullptr;
+	BrotliDecoderState *decoder = nullptr;
+	BrotliEncoderState *encoder = nullptr;
 	bool writing = false;
 	bool draining_decoder_output = false;
 };
@@ -39,12 +39,12 @@ void BrotliStreamWrapper::Initialize(QueryContext, CompressedFile &file_p, bool 
 	file = &file_p;
 	writing = write;
 	if (write) {
-		encoder = duckdb_brotli::BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
+		encoder = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
 		if (!encoder) {
 			throw IOException("Failed to initialize Brotli encoder");
 		}
 	} else {
-		decoder = duckdb_brotli::BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+		decoder = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
 		if (!decoder) {
 			throw IOException("Failed to initialize Brotli decoder");
 		}
@@ -61,16 +61,16 @@ bool BrotliStreamWrapper::Read(StreamData &sd) {
 	size_t available_output = UnsafeNumericCast<size_t>(sd.out_buf_size);
 	uint8_t *next_output = sd.out_buff.get();
 
-	const auto result = duckdb_brotli::BrotliDecoderDecompressStream(decoder, &available_input, &next_input,
-	                                                                 &available_output, &next_output, nullptr);
+	const auto result =
+	    BrotliDecoderDecompressStream(decoder, &available_input, &next_input, &available_output, &next_output, nullptr);
 	if (was_draining) {
-		if (result != duckdb_brotli::BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT) {
+		if (result != BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT) {
 			draining_decoder_output = false;
 			sd.in_buff_start = sd.in_buff_end;
 		}
 	} else {
 		sd.in_buff_start = const_cast<data_ptr_t>(next_input);
-		if (result == duckdb_brotli::BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT && available_input == 0) {
+		if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT && available_input == 0) {
 			// CompressedFile stops invoking the decoder once its input buffer is
 			// empty. Keep one consumed byte as a sentinel while Brotli drains
 			// output that it buffered internally; it is not passed in again.
@@ -83,18 +83,17 @@ bool BrotliStreamWrapper::Read(StreamData &sd) {
 	sd.out_buff_end = next_output;
 
 	switch (result) {
-	case duckdb_brotli::BROTLI_DECODER_RESULT_SUCCESS:
+	case BROTLI_DECODER_RESULT_SUCCESS:
 		return true;
-	case duckdb_brotli::BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT:
+	case BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT:
 		if (available_input != 0) {
 			throw InternalException("Brotli decoder requested input without consuming its input buffer");
 		}
 		return false;
-	case duckdb_brotli::BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT:
+	case BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT:
 		return false;
-	case duckdb_brotli::BROTLI_DECODER_RESULT_ERROR:
-		throw IOException("Failed to decompress Brotli stream (error code %d)",
-		                  duckdb_brotli::BrotliDecoderGetErrorCode(decoder));
+	case BROTLI_DECODER_RESULT_ERROR:
+		throw IOException("Failed to decompress Brotli stream (error code %d)", BrotliDecoderGetErrorCode(decoder));
 	default:
 		throw InternalException("Unexpected Brotli decoder result");
 	}
@@ -109,28 +108,26 @@ void BrotliStreamWrapper::Write(CompressedFile &file_p, StreamData &sd, data_ptr
 	do {
 		size_t available_output = UnsafeNumericCast<size_t>(sd.out_buf_size);
 		uint8_t *next_output = sd.out_buff.get();
-		if (!duckdb_brotli::BrotliEncoderCompressStream(encoder, duckdb_brotli::BROTLI_OPERATION_PROCESS,
-		                                                &available_input, &next_input, &available_output, &next_output,
-		                                                nullptr)) {
+		if (!BrotliEncoderCompressStream(encoder, BROTLI_OPERATION_PROCESS, &available_input, &next_input,
+		                                 &available_output, &next_output, nullptr)) {
 			throw IOException("Failed to compress Brotli stream");
 		}
 		WriteOutput(file_p, sd.out_buff.get(), UnsafeNumericCast<idx_t>(next_output - sd.out_buff.get()));
-	} while (available_input > 0 || duckdb_brotli::BrotliEncoderHasMoreOutput(encoder));
+	} while (available_input > 0 || BrotliEncoderHasMoreOutput(encoder));
 }
 
 void BrotliStreamWrapper::FinishWrite() {
 	D_ASSERT(file);
 	D_ASSERT(encoder);
 
-	while (!duckdb_brotli::BrotliEncoderIsFinished(encoder)) {
+	while (!BrotliEncoderIsFinished(encoder)) {
 		size_t available_input = 0;
 		const uint8_t *next_input = nullptr;
 		auto &sd = file->stream_data;
 		size_t available_output = UnsafeNumericCast<size_t>(sd.out_buf_size);
 		uint8_t *next_output = sd.out_buff.get();
-		if (!duckdb_brotli::BrotliEncoderCompressStream(encoder, duckdb_brotli::BROTLI_OPERATION_FINISH,
-		                                                &available_input, &next_input, &available_output, &next_output,
-		                                                nullptr)) {
+		if (!BrotliEncoderCompressStream(encoder, BROTLI_OPERATION_FINISH, &available_input, &next_input,
+		                                 &available_output, &next_output, nullptr)) {
 			throw IOException("Failed to finish Brotli stream");
 		}
 		WriteOutput(*file, sd.out_buff.get(), UnsafeNumericCast<idx_t>(next_output - sd.out_buff.get()));
@@ -158,11 +155,11 @@ void BrotliStreamWrapper::AbortWrite() {
 void BrotliStreamWrapper::DestroyStates() {
 	draining_decoder_output = false;
 	if (decoder) {
-		duckdb_brotli::BrotliDecoderDestroyInstance(decoder);
+		BrotliDecoderDestroyInstance(decoder);
 		decoder = nullptr;
 	}
 	if (encoder) {
-		duckdb_brotli::BrotliEncoderDestroyInstance(encoder);
+		BrotliEncoderDestroyInstance(encoder);
 		encoder = nullptr;
 	}
 }

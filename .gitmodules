@@ -15,3 +15,6 @@
 [submodule "lzokay"]
 	path = lzokay
 	url = https://github.com/AxioDL/lzokay.git
+[submodule "brotli"]
+	path = brotli
+	url = https://github.com/google/brotli.git

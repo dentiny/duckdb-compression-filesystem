@@ -53,3 +53,21 @@ query I
 SELECT count(*) FROM read_csv('{TEMP_DIR}/empty.csv.br');
 ----
 0
+
+# Exercise multiple 64 KiB input/output buffers with data integrity checks.
+statement ok
+COPY (SELECT i, md5(i::VARCHAR) AS s FROM range(100000) t(i)) TO '{TEMP_DIR}/large.csv.br' (HEADER, COMPRESSION 'brotli');
+
+query II
+SELECT count(*), count(*) FILTER (WHERE s = md5(i::VARCHAR)) FROM read_csv('{TEMP_DIR}/large.csv.br');
+----
+100000	100000
+
+# A reserved window-bits encoding must fail as a decoder error.
+statement ok
+COPY (SELECT from_hex('11000000000000000000000000000000')) TO '{TEMP_DIR}/invalid.br' (FORMAT BLOB, COMPRESSION 'none');
+
+statement error
+SELECT * FROM read_csv('{TEMP_DIR}/invalid.br', header=false, columns={'i':'INTEGER'});
+----
+Failed to decompress Brotli stream
