@@ -20,9 +20,15 @@ files can be used directly by readers and writers such as `read_csv` and
 
 DuckDB already provides native file-level support for gzip and Zstandard.
 
-The extension uses the LZ4, Snappy, Brotli, and miniz implementations vendored in the
-DuckDB source tree. Bzip2 1.0.8 and XZ Utils 5.8.3 are included as source
-submodules, so the extension does not require external runtime libraries.
+The extension uses the LZ4, Snappy, and miniz implementations vendored in the
+DuckDB source tree. Brotli 1.2.1, Bzip2 1.0.8, and XZ Utils 5.8.3 are included
+as source submodules, so the extension does not require external runtime libraries.
+
+Brotli is pinned independently of DuckDB to include the fix for
+[CVE-2026-111497](https://github.com/google/brotli/releases/tag/v1.2.1).
+Both static and loadable builds use this patched library for the `brotli`
+filesystem. This does not replace the Brotli decoder used by DuckDB's Parquet
+extension; keep DuckDB updated separately for that path.
 
 `deflate` reads and writes zlib-wrapped streams, compatible with Hadoop
 DefaultCodec and Python `zlib.compress`. Raw DEFLATE, gzip, ZIP containers,
@@ -103,3 +109,18 @@ SELECT * FROM read_csv('events.csv', compression = 'deflate');
 SELECT * FROM read_csv('events.csv', compression = 'lzma');
 SELECT * FROM read_csv('events.csv', compression = 'xz');
 ```
+
+## Brotli security regression
+
+After configuring the extension build, run the decoder regression separately:
+
+```sh
+cmake --build build/release --target compression_fs_brotli_test
+ctest --test-dir build/release/extension/compression_fs -R '^compression_fs_brotli_security$' --output-on-failure
+```
+
+The test constructs the exhausted single-type block state behind
+CVE-2026-111497 and checks that short-input and fast-input decoding return a
+terminal format error. It uses Brotli's private state layout from the pinned
+submodule. Filesystem round trips, buffer boundaries, and malformed input are
+covered by `test/sql/test_brotli_compress_fs.test`.
